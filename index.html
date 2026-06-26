@@ -168,13 +168,12 @@ const PLAYLIST = [
 ];
 
 const audio = new Audio();
-audio.crossOrigin = 'anonymous';
 let currentIndex = 0;
 let isPlaying = false;
 
 function loadTrack(index) {
   const track = PLAYLIST[index];
-  audio.src = `https://drive.google.com/uc?export=view&id=${track.id}`;
+  audio.src = `https://raw.githubusercontent.com/Neonotso/dwell-player/main/tracks/${track.id}.mp3`;
   audio.load();
   document.getElementById('trackTitle').textContent = track.name;
   document.getElementById('progressFill').style.width = '0%';
