@@ -258,14 +258,20 @@ function attachEvents(el) {
   });
 
   el.addEventListener('timeupdate', () => {
-    const pct = (el.currentTime / el.duration) * 100;
+    const duration = el.duration || 0;
+    const pct = duration > 0 ? (el.currentTime / duration) * 100 : 0;
     document.getElementById('progressFill').style.width = `${pct}%`;
     document.getElementById('currentTime').textContent = formatTime(el.currentTime);
+    document.getElementById('totalTime').textContent = formatTime(duration);
 
     // Preload next track when 10 seconds remaining
-    if (el.duration - el.currentTime <= 10) {
+    if (duration > 0 && duration - el.currentTime <= 10) {
       preloadNext();
     }
+  });
+
+  el.addEventListener('durationchange', () => {
+    document.getElementById('totalTime').textContent = formatTime(el.duration || 0);
   });
 
   el.addEventListener('ended', () => {
