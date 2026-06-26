@@ -178,7 +178,7 @@ function getNextAudio() { return audioEls[1 - audioIdx]; }
 
 function loadTrack(index, el) {
   const track = PLAYLIST[index];
-  el.src = `https://raw.githubusercontent.com/Neonotso/dwell-player/tracks-storage/${track.id}.mp3`;
+  el.src = `https://raw.githubusercontent.com/Neonotso/dwell-player/tracks-storage/tracks/${track.id}.mp3`;
   el.load();
 }
 
