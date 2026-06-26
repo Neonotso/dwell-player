@@ -167,34 +167,47 @@ const PLAYLIST = [
   {id:'1nk6kCqNVKqj9H-TZVEAc9vB6GSUP8YJQ',name:'33 Thanks and Goodbye (James)'},
 ];
 
-const audio = new Audio();
+// Dual audio elements for gapless playback
+const audioEls = [new Audio(), new Audio()];
+let audioIdx = 0;
 let currentIndex = 0;
 let isPlaying = false;
 
-function loadTrack(index) {
+function getAudio() { return audioEls[audioIdx]; }
+function getNextAudio() { return audioEls[1 - audioIdx]; }
+
+function loadTrack(index, el) {
   const track = PLAYLIST[index];
-  audio.src = `https://raw.githubusercontent.com/Neonotso/dwell-player/main/tracks/${track.id}.mp3`;
-  audio.load();
+  el.src = `https://raw.githubusercontent.com/Neonotso/dwell-player/main/tracks/${track.id}.mp3`;
+  el.load();
+}
+
+function preloadNext() {
+  const nextIdx = (currentIndex + 1) % PLAYLIST.length;
+  loadTrack(nextIdx, getNextAudio());
+}
+
+function updateUI(index) {
+  const track = PLAYLIST[index];
   document.getElementById('trackTitle').textContent = track.name;
   document.getElementById('progressFill').style.width = '0%';
   document.getElementById('currentTime').textContent = '0:00';
-  document.getElementById('totalTime').textContent = '0:00';
   updatePlaylistHighlight();
 }
 
 function play() {
+  const audio = getAudio();
   audio.play().then(() => {
     isPlaying = true;
     document.getElementById('playBtn').textContent = '⏸';
   }).catch(() => {
-    // Autoplay may be blocked; user needs to click play
     isPlaying = false;
     document.getElementById('playBtn').textContent = '▶';
   });
 }
 
 function pause() {
-  audio.pause();
+  getAudio().pause();
   isPlaying = false;
   document.getElementById('playBtn').textContent = '▶';
 }
@@ -203,22 +216,26 @@ function togglePlay() {
   if (isPlaying) pause(); else play();
 }
 
+function switchTrack(index, autoPlay) {
+  currentIndex = index;
+  audioIdx = 1 - audioIdx;
+  updateUI(currentIndex);
+  if (autoPlay) play();
+  preloadNext();
+}
+
 function prevTrack() {
-  currentIndex = (currentIndex - 1 + PLAYLIST.length) % PLAYLIST.length;
-  loadTrack(currentIndex);
-  if (isPlaying) play();
+  const prevIdx = (currentIndex - 1 + PLAYLIST.length) % PLAYLIST.length;
+  switchTrack(prevIdx, isPlaying);
 }
 
 function nextTrack() {
-  currentIndex = (currentIndex + 1) % PLAYLIST.length;
-  loadTrack(currentIndex);
-  if (isPlaying) play();
+  const nextIdx = (currentIndex + 1) % PLAYLIST.length;
+  switchTrack(nextIdx, isPlaying);
 }
 
 function selectTrack(index) {
-  currentIndex = index;
-  loadTrack(currentIndex);
-  if (isPlaying) play();
+  switchTrack(index, isPlaying);
 }
 
 function formatTime(sec) {
@@ -234,26 +251,39 @@ function updatePlaylistHighlight() {
   });
 }
 
-audio.addEventListener('loadedmetadata', () => {
-  document.getElementById('totalTime').textContent = formatTime(audio.duration);
-});
+// --- Event listeners for current audio ---
+function attachEvents(el) {
+  el.addEventListener('loadedmetadata', () => {
+    document.getElementById('totalTime').textContent = formatTime(el.duration);
+  });
 
-audio.addEventListener('timeupdate', () => {
-  const pct = (audio.currentTime / audio.duration) * 100;
-  document.getElementById('progressFill').style.width = `${pct}%`;
-  document.getElementById('currentTime').textContent = formatTime(audio.currentTime);
-});
+  el.addEventListener('timeupdate', () => {
+    const pct = (el.currentTime / el.duration) * 100;
+    document.getElementById('progressFill').style.width = `${pct}%`;
+    document.getElementById('currentTime').textContent = formatTime(el.currentTime);
 
-audio.addEventListener('ended', () => {
-  // Auto-advance to next track (loop)
-  currentIndex = (currentIndex + 1) % PLAYLIST.length;
-  loadTrack(currentIndex);
-  play();
-});
+    // Preload next track when 10 seconds remaining
+    if (el.duration - el.currentTime <= 10) {
+      preloadNext();
+    }
+  });
 
-audio.addEventListener('error', () => {
-  document.getElementById('trackTitle').textContent = `⚠️ Error loading: ${PLAYLIST[currentIndex].name}`;
-});
+  el.addEventListener('ended', () => {
+    // Gapless: swap to preloaded next audio element
+    const nextIdx = (currentIndex + 1) % PLAYLIST.length;
+    currentIndex = nextIdx;
+    audioIdx = 1 - audioIdx;
+    updateUI(currentIndex);
+    play();
+    preloadNext();
+  });
+
+  el.addEventListener('error', () => {
+    document.getElementById('trackTitle').textContent = `⚠️ Error loading: ${PLAYLIST[currentIndex].name}`;
+  });
+}
+
+audioEls.forEach(el => attachEvents(el));
 
 // Build playlist UI
 const playlistEl = document.getElementById('playlist');
@@ -270,8 +300,47 @@ document.getElementById('playBtn').addEventListener('click', togglePlay);
 document.getElementById('prevBtn').addEventListener('click', prevTrack);
 document.getElementById('nextBtn').addEventListener('click', nextTrack);
 
-// Load first track
-loadTrack(0);
+// Load first track and preload second
+loadTrack(0, getAudio());
+preloadNext();
+updateUI(0);
+
+// Scrub: click/drag on progress bar to seek
+const progressBar = document.querySelector('.progress-bar');
+let isDragging = false;
+
+function seekFromEvent(e) {
+  const rect = progressBar.getBoundingClientRect();
+  const x = (e.clientX || e.touches[0].clientX) - rect.left;
+  const pct = Math.max(0, Math.min(100, (x / rect.width) * 100));
+  const audio = getAudio();
+  const seekTime = (pct / 100) * (audio.duration || 0);
+  audio.currentTime = seekTime;
+  document.getElementById('progressFill').style.width = `${pct}%`;
+  document.getElementById('currentTime').textContent = formatTime(seekTime);
+}
+
+progressBar.addEventListener('mousedown', (e) => {
+  isDragging = true;
+  seekFromEvent(e);
+});
+document.addEventListener('mousemove', (e) => {
+  if (isDragging) seekFromEvent(e);
+});
+document.addEventListener('mouseup', () => {
+  isDragging = false;
+});
+
+progressBar.addEventListener('touchstart', (e) => {
+  isDragging = true;
+  seekFromEvent(e);
+});
+document.addEventListener('touchmove', (e) => {
+  if (isDragging) seekFromEvent(e);
+});
+document.addEventListener('touchend', () => {
+  isDragging = false;
+});
 </script>
 </body>
 </html>
