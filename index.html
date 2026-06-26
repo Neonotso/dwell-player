@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dwell Night Audio Player</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+.player {
+  background: #16213e;
+  border-radius: 20px;
+  padding: 32px;
+  width: 90%;
+  max-width: 520px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+h1 {
+  font-size: 16px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+.track-title {
+  font-size: 18px;
+  font-weight: 500;
+  text-align: center;
+  margin-bottom: 24px;
+  min-height: 2em;
+  color: #f0f0f0;
+  line-height: 1.4;
+}
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: #2a2a4a;
+  border-radius: 3px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6c63ff, #48b5ff);
+  border-radius: 3px;
+  width: 0%;
+  transition: width 0.3s ease;
+}
+.time-display {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 20px;
+}
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.controls button {
+  background: none;
+  border: 2px solid #6c63ff;
+  color: #6c63ff;
+  font-size: 24px;
+  padding: 12px 20px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.controls button:hover { background: #6c63ff22; }
+.controls button.primary { background: #6c63ff; color: #fff; border-color: #6c63ff; }
+.controls button.primary:hover { background: #7b74ff; }
+.playlist {
+  margin-top: 16px;
+  border-top: 1px solid #2a2a4a;
+  padding-top: 12px;
+}
+.playlist-item {
+  padding: 6px 8px;
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #888;
+  transition: all 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.playlist-item:hover { background: #2a2a4a; }
+.playlist-item.active { color: #6c63ff; font-weight: 500; }
+.loop-indicator {
+  text-align: center;
+  font-size: 11px;
+  color: #6c63ff;
+  margin-top: 8px;
+}
+</style>
+</head>
+<body>
+<div class="player">
+  <h1>Dwell Night</h1>
+  <div class="track-title" id="trackTitle">Loading...</div>
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="time-display">
+    <span id="currentTime">0:00</span>
+    <span id="totalTime">0:00</span>
+  </div>
+  <div class="controls">
+    <button id="prevBtn" title="Previous">⏮</button>
+    <button id="playBtn" class="primary" title="Play/Pause">▶</button>
+    <button id="nextBtn" title="Next">⏭</button>
+  </div>
+  <div class="loop-indicator">🔁 Loop — plays through all tracks and starts over</div>
+  <div class="playlist" id="playlist"></div>
+</div>
+
+<script>
+const PLAYLIST = [
+  {id:'1eqMzvwdXwXjmaWdN9HQl7d9D2YI_v41E',name:'01 What is Dwell? (James)'},
+  {id:'1HGg7VHo4c1Ebn0-m9ZH2o-NCJT2LVnHk',name:'02 Morgan\'s Prayer'},
+  {id:'1jy02GmgWoJDEpDnlbNKlpTenLWXT-sMO',name:'03 Instrumental'},
+  {id:'1ZyPc1TNLYueI0n5C1yGhD7RRryHWr8Tw',name:'04 Your Joy Is My Strength (Morgan)'},
+  {id:'1jLwZTO4-O1OSYPydZSBDEm2QVWKe-_CJ',name:'05 Fullness of Joy (Josh) - Psalm 16'},
+  {id:'1wUVFZRgF9Uu-OPWSTlHYpSCELmqeCxMm',name:'06 Who Is This King Of Glory? (Kayla) - Psalm 100 & 24'},
+  {id:'1cUp215C3uEDoMe0tRridrhfR9Dt1uwsw',name:'07 Have Your Way (Josh)'},
+  {id:'1XKbFI3gkZEdIXMuqTUNRIpeUohCmWjbZ',name:'08 Ryan\'s Prayer'},
+  {id:'1jBdt-pvFt70XERvSsq1Y6lYC8ioXM_ay',name:'09 I Won\'t Forget All Your Benefits (Morgan) - Psalm 103 & Isaiah 53'},
+  {id:'1B9ZKCGbDGe23WEukSIhSZU6sszsoR7fl',name:'10 OIL (Morgan)'},
+  {id:'1-YL4YtkoPFgtLheFyGF27fa4YoSpbrhG',name:'11 Fire Is In Your Eyes (Morgan)'},
+  {id:'1P99Yd5OPZrxxpvghZ-w5u5Sk7HafE8NK',name:'12 You Light Me Over & Over & Over Again (Kayla)'},
+  {id:'1fS86BTQIh7rsUKEwXS_jtrL9EdYCFO2g',name:'13 Our Hands Are Open (James)'},
+  {id:'13X0zxvbQ4WjSSx-PoHlNxGR4tzYsrAPQ',name:'14 RETURNING (James & Morgan)'},
+  {id:'1TSqCMq_5SIMOwm51VLIfiPuvETVhuPxm',name:'15 Instrumental'},
+  {id:'1mqrqdXiAYYnKqanHSh3aMHjcKkCMmR5X',name:'16 Your Love Is Stronger Than Death (James & Morgan)'},
+  {id:'1TcyazPP0FBJnQ9-dlJxhr8XOSpFHRlb1',name:'17 He does give us rest (Josh)'},
+  {id:'1Jvpf4vVzSJB_wQeieNc57Ii8zn1Ktl3W',name:'18 When I\'m hungry, You\'re my bread (James)'},
+  {id:'1FDkBAR07UtWmliCHhyly_DBDbKeaU7UM',name:'19 Here Is Where I Find Rest (Morgan)'},
+  {id:'1qSzcw2gEjNwzqpAH2ZXolQboTFvDNGr2',name:'20 RIGHT NOW (Morgan)'},
+  {id:'1SXPeH0TcBZ2g3ok3yW2JRk5v_3xPZr3g',name:'21 We\'re going to pray for healing (James)'},
+  {id:'1VvtHPAk8XS1VOduhxcz2rJwf47asPKxa',name:'22 The Lord Our God Is A Sun And Shield (Kayla) - Psalm 84'},
+  {id:'1y5JDrXjYWt5jnGTAP5OfkT_jEYIVWlyH',name:'23 Conduit For You (James & Ryan)'},
+  {id:'1z8pywcMBmxLuwR3sLOg4xr8DBefJl_8t',name:'24 FOR THE REST OF THE NIGHT (Ryan)'},
+  {id:'15oZ23oRApIhTeN_UX-ZUtMNOMbaLML02',name:'25 TASTE AND SEE (Ryan) - Psalm 34'},
+  {id:'1g5Dd_o04XLvcUzOVfqUxvSwsRDmPuQex',name:'26 The Joy of the Lord is My Strength (Josh) - Nehemiah 8'},
+  {id:'1XfFSQleuoZsDHa4zRjdozxImS4cZoN44',name:'27 BURNING BUSH (Morgan) - Exodus 3 & 34 & Hebrews 12'},
+  {id:'1Pd4OpDcbX_snEGPrHQVBSKE3ffh-ayai',name:'28 Let It Shine (Ryan) - Matthew 5 & Exodus 33'},
+  {id:'1eMjqtDmkCxr0FlMNajLoA9qucituN-y1',name:'29 Nowhere On The Earth Glistens Like You Do (Morgan) - Revelation 1'},
+  {id:'1UdV20bQ4el4wijMsWQT-R1TWZYwgkT90',name:'30 I Can Trust You At Your Word (James)'},
+  {id:'1YyCAwKK3dD2g7ptstzsndFyTD-62Govc',name:'31 Intro to You First (Morgan)'},
+  {id:'1ONvrmmcHUBx9UoKre0ucPnGEk-LM5WE5',name:'32 YOU FIRST (Morgan)'},
+  {id:'1nk6kCqNVKqj9H-TZVEAc9vB6GSUP8YJQ',name:'33 Thanks and Goodbye (James)'},
+];
+
+const audio = new Audio();
+let currentIndex = 0;
+let isPlaying = false;
+
+function loadTrack(index) {
+  const track = PLAYLIST[index];
+  audio.src = `/api/audio-proxy?driveId=${track.id}`;
+  audio.load();
+  document.getElementById('trackTitle').textContent = track.name;
+  document.getElementById('progressFill').style.width = '0%';
+  document.getElementById('currentTime').textContent = '0:00';
+  document.getElementById('totalTime').textContent = '0:00';
+  updatePlaylistHighlight();
+}
+
+function play() {
+  audio.play().then(() => {
+    isPlaying = true;
+    document.getElementById('playBtn').textContent = '⏸';
+  }).catch(() => {
+    // Autoplay may be blocked; user needs to click play
+    isPlaying = false;
+    document.getElementById('playBtn').textContent = '▶';
+  });
+}
+
+function pause() {
+  audio.pause();
+  isPlaying = false;
+  document.getElementById('playBtn').textContent = '▶';
+}
+
+function togglePlay() {
+  if (isPlaying) pause(); else play();
+}
+
+function prevTrack() {
+  currentIndex = (currentIndex - 1 + PLAYLIST.length) % PLAYLIST.length;
+  loadTrack(currentIndex);
+  if (isPlaying) play();
+}
+
+function nextTrack() {
+  currentIndex = (currentIndex + 1) % PLAYLIST.length;
+  loadTrack(currentIndex);
+  if (isPlaying) play();
+}
+
+function selectTrack(index) {
+  currentIndex = index;
+  loadTrack(currentIndex);
+  if (isPlaying) play();
+}
+
+function formatTime(sec) {
+  if (isNaN(sec)) return '0:00';
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function updatePlaylistHighlight() {
+  document.querySelectorAll('.playlist-item').forEach((el, i) => {
+    el.classList.toggle('active', i === currentIndex);
+  });
+}
+
+audio.addEventListener('loadedmetadata', () => {
+  document.getElementById('totalTime').textContent = formatTime(audio.duration);
+});
+
+audio.addEventListener('timeupdate', () => {
+  const pct = (audio.currentTime / audio.duration) * 100;
+  document.getElementById('progressFill').style.width = `${pct}%`;
+  document.getElementById('currentTime').textContent = formatTime(audio.currentTime);
+});
+
+audio.addEventListener('ended', () => {
+  // Auto-advance to next track (loop)
+  currentIndex = (currentIndex + 1) % PLAYLIST.length;
+  loadTrack(currentIndex);
+  play();
+});
+
+audio.addEventListener('error', () => {
+  document.getElementById('trackTitle').textContent = `⚠️ Error loading: ${PLAYLIST[currentIndex].name}`;
+});
+
+// Build playlist UI
+const playlistEl = document.getElementById('playlist');
+PLAYLIST.forEach((track, i) => {
+  const item = document.createElement('div');
+  item.className = 'playlist-item';
+  item.textContent = track.name;
+  item.addEventListener('click', () => selectTrack(i));
+  playlistEl.appendChild(item);
+});
+
+// Controls
+document.getElementById('playBtn').addEventListener('click', togglePlay);
+document.getElementById('prevBtn').addEventListener('click', prevTrack);
+document.getElementById('nextBtn').addEventListener('click', nextTrack);
+
+// Load first track
+loadTrack(0);
+</script>
+</body>
+</html>
