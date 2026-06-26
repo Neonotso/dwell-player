@@ -173,7 +173,7 @@ let isPlaying = false;
 
 function loadTrack(index) {
   const track = PLAYLIST[index];
-  audio.src = `/api/audio-proxy?driveId=${track.id}`;
+  audio.src = `https://drive.google.com/uc?export=view&id=${track.id}`;
   audio.load();
   document.getElementById('trackTitle').textContent = track.name;
   document.getElementById('progressFill').style.width = '0%';
