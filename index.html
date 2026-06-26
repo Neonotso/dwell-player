@@ -263,7 +263,6 @@ function attachEvents(el) {
     const pct = duration > 0 ? (el.currentTime / duration) * 100 : 0;
     document.getElementById('progressFill').style.width = `${pct}%`;
     document.getElementById('currentTime').textContent = formatTime(el.currentTime);
-    document.getElementById('totalTime').textContent = formatTime(duration);
 
     // Preload next track when 10 seconds remaining
     if (duration > 0 && duration - el.currentTime <= 10) {
@@ -311,8 +310,12 @@ document.getElementById('nextBtn').addEventListener('click', nextTrack);
 setInterval(() => {
   const audio = getAudio();
   const dur = audio.duration || 0;
+  const el = document.getElementById('totalTime');
   if (dur > 0) {
-    document.getElementById('totalTime').textContent = formatTime(dur);
+    const formatted = formatTime(dur);
+    if (el.textContent !== formatted) {
+      el.textContent = formatted;
+    }
   }
 }, 1000);
 
