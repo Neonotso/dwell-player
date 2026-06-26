@@ -219,6 +219,7 @@ function togglePlay() {
 function switchTrack(index, autoPlay) {
   currentIndex = index;
   audioIdx = 1 - audioIdx;
+  loadTrack(currentIndex, getAudio());
   updateUI(currentIndex);
   if (autoPlay) play();
   preloadNext();
@@ -305,6 +306,15 @@ PLAYLIST.forEach((track, i) => {
 document.getElementById('playBtn').addEventListener('click', togglePlay);
 document.getElementById('prevBtn').addEventListener('click', prevTrack);
 document.getElementById('nextBtn').addEventListener('click', nextTrack);
+
+// Periodically check and update duration (fixes incorrect initial duration on some files)
+setInterval(() => {
+  const audio = getAudio();
+  const dur = audio.duration || 0;
+  if (dur > 0) {
+    document.getElementById('totalTime').textContent = formatTime(dur);
+  }
+}, 1000);
 
 // Load first track and preload second
 loadTrack(0, getAudio());
