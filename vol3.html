@@ -173,9 +173,9 @@ const PLAYLIST = [
   {id:'07-for-the-rest-of-the-night',name:'07 FOR THE REST OF THE NIGHT'},
   {id:'08-taste-and-see',name:'08 TASTE AND SEE'},
   {id:'09-joy-of-the-lord-is-my-strength',name:'09 The Joy of the Lord is My Strength [spontaneous]'},
-  {id:'10-burning-bush-long',name:'10 BURNING BUSH (includes Make Me Radiant)',short:'10-burning-bush'},
+  {id:'10-burning-bush-long',name:'10 BURNING BUSH (includes Make Me Radiant)',short:'10-burning-bush',shortName:'10 BURNING BUSH'},
   {id:'11-let-it-shine',name:'11 Let It Shine [spontaneous]'},
-  {id:'12-you-first-long',name:'12 YOU FIRST (includes No One Compares To You)',short:'12-you-first'},
+  {id:'12-you-first-long',name:'12 YOU FIRST (includes No One Compares To You)',short:'12-you-first',shortName:'12 YOU FIRST'},
   {id:'13-joy-strength-king-glory',name:'13 Your Joy Is My Strength & Who Is This King Of Glory? [spontaneous]'},
   {id:'14-wont-forget-benefits',name:'14 I Won\'t Forget All Your Benefits [spontaneous]'},
   {id:'15-love-stronger-than-death',name:'15 Your Love Is Stronger Than Death [spontaneous]'},
@@ -193,9 +193,10 @@ function setVersion(ver) {
   useLong = ver === 'long';
   document.getElementById('btnLong').classList.toggle('active', useLong);
   document.getElementById('btnShort').classList.toggle('active', !useLong);
-  // Update track names and reload if on a toggleable track
   updateUI();
-  if (PLAYLIST[currentIndex].short) {
+  renderPlaylist();
+  const track = PLAYLIST[currentIndex];
+  if (track.short) {
     loadTrack(currentIndex, getAudio());
   }
 }
@@ -222,9 +223,13 @@ function formatTime(seconds) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+function getTrackName(track) {
+  return (!useLong && track.shortName) ? track.shortName : track.name;
+}
+
 function updateUI() {
   const track = PLAYLIST[currentIndex];
-  document.getElementById('trackTitle').textContent = track.name;
+  document.getElementById('trackTitle').textContent = getTrackName(track);
   document.querySelectorAll('.playlist-item').forEach((el, i) => {
     el.classList.toggle('active', i === currentIndex);
   });
@@ -232,10 +237,11 @@ function updateUI() {
 
 function renderPlaylist() {
   const container = document.getElementById('playlist');
+  container.innerHTML = '';
   PLAYLIST.forEach((track, i) => {
     const el = document.createElement('div');
     el.className = 'playlist-item' + (i === currentIndex ? ' active' : '');
-    el.textContent = track.name;
+    el.textContent = getTrackName(track);
     el.addEventListener('click', () => {
       currentIndex = i;
       loadTrack(i, getAudio());
