@@ -104,6 +104,15 @@ h1 {
 }
 .playlist-item:hover { background: #2a2a4a; }
 .playlist-item.active { color: #6c63ff; font-weight: 500; }
+.back-link {
+  display: block;
+  text-align: center;
+  margin-top: 16px;
+  font-size: 13px;
+  color: #6c63ff;
+  text-decoration: none;
+}
+.back-link:hover { text-decoration: underline; }
 .loop-indicator {
   text-align: center;
   font-size: 11px;
@@ -128,6 +137,7 @@ h1 {
   </div>
   <div class="loop-indicator">🔁 Loop — plays through all tracks and starts over</div>
   <div class="playlist" id="playlist"></div>
+  <a href="vol3.html" class="back-link">→ VOL 3</a>
 </div>
 
 <script>

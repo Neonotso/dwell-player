@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VOL 3 Audio Player</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+.player {
+  background: #16213e;
+  border-radius: 20px;
+  padding: 32px;
+  width: 90%;
+  max-width: 520px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+h1 {
+  font-size: 16px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+.track-title {
+  font-size: 18px;
+  font-weight: 500;
+  text-align: center;
+  margin-bottom: 24px;
+  min-height: 2em;
+  color: #f0f0f0;
+  line-height: 1.4;
+}
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: #2a2a4a;
+  border-radius: 3px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6c63ff, #48b5ff);
+  border-radius: 3px;
+  width: 0%;
+  transition: width 0.3s ease;
+}
+.time-display {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 20px;
+}
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.controls button {
+  background: none;
+  border: 2px solid #6c63ff;
+  color: #6c63ff;
+  font-size: 24px;
+  padding: 12px 20px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.controls button:hover { background: #6c63ff22; }
+.controls button.primary { background: #6c63ff; color: #fff; border-color: #6c63ff; }
+.controls button.primary:hover { background: #7b74ff; }
+.loop-indicator {
+  text-align: center;
+  font-size: 13px;
+  color: #6c63ff;
+  margin-bottom: 16px;
+}
+.playlist {
+  margin-top: 16px;
+  border-top: 1px solid #2a2a4a;
+  padding-top: 12px;
+}
+.playlist-item {
+  padding: 6px 8px;
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #888;
+  transition: all 0.15s;
+}
+.playlist-item:hover { background: #1a1a2e; color: #ccc; }
+.playlist-item.active { color: #6c63ff; font-weight: 600; background: #1a1a2e; }
+.back-link {
+  display: block;
+  text-align: center;
+  margin-top: 16px;
+  font-size: 13px;
+  color: #6c63ff;
+  text-decoration: none;
+}
+.back-link:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="player">
+  <h1>VOL 3</h1>
+  <div class="track-title" id="trackTitle">—</div>
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="time-display">
+    <span id="currentTime">0:00</span>
+    <span id="totalTime">0:00</span>
+  </div>
+  <div class="controls">
+    <button id="prevBtn" aria-label="Previous">⏮</button>
+    <button class="primary" id="playBtn" aria-label="Play">▶</button>
+    <button id="nextBtn" aria-label="Next">⏭</button>
+  </div>
+  <div class="loop-indicator">🔁 Loop — plays through all tracks and starts over</div>
+  <div class="playlist" id="playlist"></div>
+  <a href="index.html" class="back-link">← Back to Dwell Night</a>
+</div>
+
+<script>
+const PLAYLIST = [
+  {id:'01-oil',name:'01 OIL'},
+  {id:'02-fire-is-in-your-eyes',name:'02 Fire Is In Your Eyes [spontaneous]'},
+  {id:'03-returning',name:'03 RETURNING'},
+  {id:'04-here-is-where-i-find-rest',name:'04 Here Is Where I Find Rest [spontaneous]'},
+  {id:'05-right-now',name:'05 RIGHT NOW'},
+  {id:'06-lord-our-god-is-a-sun-and-shield',name:'06 For The Lord Our God Is A Sun And Shield [spontaneous]'},
+  {id:'07-for-the-rest-of-the-night',name:'07 FOR THE REST OF THE NIGHT'},
+  {id:'08-taste-and-see',name:'08 TASTE AND SEE'},
+  {id:'09-joy-of-the-lord-is-my-strength',name:'09 The Joy of the Lord is My Strength [spontaneous]'},
+  {id:'10-burning-bush',name:'10 BURNING BUSH'},
+  {id:'11-let-it-shine',name:'11 Let It Shine [spontaneous]'},
+  {id:'12-you-first',name:'12 YOU FIRST'},
+];
+
+// Dual audio elements for gapless playback
+const audioEls = [new Audio(), new Audio()];
+let audioIdx = 0;
+let currentIndex = 0;
+let isPlaying = false;
+
+function getAudio() { return audioEls[audioIdx]; }
+function getNextAudio() { return audioEls[1 - audioIdx]; }
+
+function loadTrack(index, el) {
+  const track = PLAYLIST[index];
+  el.src = `https://raw.githubusercontent.com/Neonotso/dwell-player/tracks-storage/vol3/${track.id}.mp3`;
+  el.load();
+}
+
+function preloadNext() {
+  const nextIdx = (currentIndex + 1) % PLAYLIST.length;
+  loadTrack(nextIdx, getNextAudio());
+}
+
+function formatTime(seconds) {
+  if (isNaN(seconds)) return '0:00';
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function updateUI() {
+  const track = PLAYLIST[currentIndex];
+  document.getElementById('trackTitle').textContent = track.name;
+  document.querySelectorAll('.playlist-item').forEach((el, i) => {
+    el.classList.toggle('active', i === currentIndex);
+  });
+}
+
+function renderPlaylist() {
+  const container = document.getElementById('playlist');
+  PLAYLIST.forEach((track, i) => {
+    const el = document.createElement('div');
+    el.className = 'playlist-item' + (i === currentIndex ? ' active' : '');
+    el.textContent = track.name;
+    el.addEventListener('click', () => {
+      currentIndex = i;
+      loadTrack(i, getAudio());
+      getAudio().play().then(() => {
+        isPlaying = true;
+        document.getElementById('playBtn').textContent = '⏸';
+        updateUI();
+        preloadNext();
+      });
+    });
+    container.appendChild(el);
+  });
+}
+
+function play() {
+  if (!isPlaying) {
+    if (!getAudio().src || getAudio().readyState < 2) {
+      loadTrack(currentIndex, getAudio());
+    }
+    getAudio().play().then(() => {
+      isPlaying = true;
+      document.getElementById('playBtn').textContent = '⏸';
+    });
+  } else {
+    getAudio().pause();
+    isPlaying = false;
+    document.getElementById('playBtn').textContent = '▶';
+  }
+}
+
+function next() {
+  currentIndex = (currentIndex + 1) % PLAYLIST.length;
+  audioIdx = 1 - audioIdx;
+  const audio = getAudio();
+  loadTrack(currentIndex, audio);
+  audio.play().then(() => {
+    isPlaying = true;
+    document.getElementById('playBtn').textContent = '⏸';
+    updateUI();
+    preloadNext();
+  });
+}
+
+function prev() {
+  currentIndex = (currentIndex - 1 + PLAYLIST.length) % PLAYLIST.length;
+  audioIdx = 1 - audioIdx;
+  const audio = getAudio();
+  loadTrack(currentIndex, audio);
+  audio.play().then(() => {
+    isPlaying = true;
+    document.getElementById('playBtn').textContent = '⏸';
+    updateUI();
+    preloadNext();
+  });
+}
+
+const audio = getAudio();
+audio.addEventListener('loadedmetadata', () => {
+  document.getElementById('totalTime').textContent = formatTime(audio.duration);
+});
+
+audio.addEventListener('timeupdate', () => {
+  if (audio.duration) {
+    const pct = (audio.currentTime / audio.duration) * 100;
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('currentTime').textContent = formatTime(audio.currentTime);
+  }
+});
+
+audio.addEventListener('ended', () => {
+  next();
+});
+
+document.getElementById('playBtn').addEventListener('click', play);
+document.getElementById('nextBtn').addEventListener('click', next);
+document.getElementById('prevBtn').addEventListener('click', prev);
+
+// Initialize
+renderPlaylist();
+loadTrack(0, getAudio());
+updateUI();
+</script>
+</body>
+</html>
