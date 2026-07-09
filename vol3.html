@@ -116,6 +116,27 @@ h1 {
   text-decoration: none;
 }
 .back-link:hover { text-decoration: underline; }
+.version-toggle {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.version-toggle button {
+  background: none;
+  border: 1px solid #2a2a4a;
+  color: #888;
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.version-toggle button.active {
+  background: #6c63ff;
+  color: #fff;
+  border-color: #6c63ff;
+}
 </style>
 </head>
 <body>
@@ -133,6 +154,10 @@ h1 {
     <button id="nextBtn" aria-label="Next">⏭</button>
   </div>
   <div class="loop-indicator">🔁 Loop — plays through all tracks and starts over</div>
+  <div class="version-toggle">
+    <button class="active" id="btnLong" onclick="setVersion('long')">Long versions</button>
+    <button id="btnShort" onclick="setVersion('short')">Short versions</button>
+  </div>
   <div class="playlist" id="playlist"></div>
   <a href="index.html" class="back-link">← Back to Dwell Night</a>
 </div>
@@ -148,9 +173,9 @@ const PLAYLIST = [
   {id:'07-for-the-rest-of-the-night',name:'07 FOR THE REST OF THE NIGHT'},
   {id:'08-taste-and-see',name:'08 TASTE AND SEE'},
   {id:'09-joy-of-the-lord-is-my-strength',name:'09 The Joy of the Lord is My Strength [spontaneous]'},
-  {id:'10-burning-bush',name:'10 BURNING BUSH'},
+  {id:'10-burning-bush-long',name:'10 BURNING BUSH (includes Make Me Radiant)',short:'10-burning-bush'},
   {id:'11-let-it-shine',name:'11 Let It Shine [spontaneous]'},
-  {id:'12-you-first',name:'12 YOU FIRST'},
+  {id:'12-you-first-long',name:'12 YOU FIRST (includes No One Compares To You)',short:'12-you-first'},
   {id:'13-joy-strength-king-glory',name:'13 Your Joy Is My Strength & Who Is This King Of Glory? [spontaneous]'},
   {id:'14-wont-forget-benefits',name:'14 I Won\'t Forget All Your Benefits [spontaneous]'},
   {id:'15-love-stronger-than-death',name:'15 Your Love Is Stronger Than Death [spontaneous]'},
@@ -162,13 +187,26 @@ const audioEls = [new Audio(), new Audio()];
 let audioIdx = 0;
 let currentIndex = 0;
 let isPlaying = false;
+let useLong = true;
+
+function setVersion(ver) {
+  useLong = ver === 'long';
+  document.getElementById('btnLong').classList.toggle('active', useLong);
+  document.getElementById('btnShort').classList.toggle('active', !useLong);
+  // Update track names and reload if on a toggleable track
+  updateUI();
+  if (PLAYLIST[currentIndex].short) {
+    loadTrack(currentIndex, getAudio());
+  }
+}
 
 function getAudio() { return audioEls[audioIdx]; }
 function getNextAudio() { return audioEls[1 - audioIdx]; }
 
 function loadTrack(index, el) {
   const track = PLAYLIST[index];
-  el.src = `https://raw.githubusercontent.com/Neonotso/dwell-player/tracks-storage/vol3/${track.id}.mp3`;
+  const id = (useLong || !track.short) ? track.id : track.short;
+  el.src = `https://raw.githubusercontent.com/Neonotso/dwell-player/tracks-storage/vol3/${id}.mp3`;
   el.load();
 }
 
