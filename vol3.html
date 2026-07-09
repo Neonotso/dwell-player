@@ -271,6 +271,43 @@ document.getElementById('playBtn').addEventListener('click', play);
 document.getElementById('nextBtn').addEventListener('click', next);
 document.getElementById('prevBtn').addEventListener('click', prev);
 
+// Scrub: click/drag on progress bar to seek
+const progressBar = document.querySelector('.progress-bar');
+let isDragging = false;
+
+function seekFromEvent(e) {
+  const rect = progressBar.getBoundingClientRect();
+  const x = (e.clientX || e.touches[0].clientX) - rect.left;
+  const pct = Math.max(0, Math.min(100, (x / rect.width) * 100));
+  const audio = getAudio();
+  const seekTime = (pct / 100) * (audio.duration || 0);
+  audio.currentTime = seekTime;
+  document.getElementById('progressFill').style.width = `${pct}%`;
+  document.getElementById('currentTime').textContent = formatTime(seekTime);
+}
+
+progressBar.addEventListener('mousedown', (e) => {
+  isDragging = true;
+  seekFromEvent(e);
+});
+document.addEventListener('mousemove', (e) => {
+  if (isDragging) seekFromEvent(e);
+});
+document.addEventListener('mouseup', () => {
+  isDragging = false;
+});
+
+progressBar.addEventListener('touchstart', (e) => {
+  isDragging = true;
+  seekFromEvent(e);
+});
+document.addEventListener('touchmove', (e) => {
+  if (isDragging) seekFromEvent(e);
+});
+document.addEventListener('touchend', () => {
+  isDragging = false;
+});
+
 // Initialize
 renderPlaylist();
 loadTrack(0, getAudio());
