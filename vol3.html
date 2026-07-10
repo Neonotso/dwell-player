@@ -173,8 +173,8 @@ const PLAYLIST = [
   {id:'07-for-the-rest-of-the-night',name:'07 FOR THE REST OF THE NIGHT'},
   {id:'08-taste-and-see',name:'08 TASTE AND SEE'},
   {id:'09-joy-of-the-lord-is-my-strength',name:'09 The Joy of the Lord is My Strength [spontaneous]'},
-  {id:'10-burning-bush-long',name:'10 BURNING BUSH (includes Make Me Radiant)',short:'10-burning-bush',shortName:'10 BURNING BUSH'},
-  {id:'11-let-it-shine',name:'11 Let It Shine [spontaneous]'},
+  {id:'10-burning-bush-long',name:'10 BURNING BUSH → Let It Shine',short:'10-burning-bush',shortName:'10 BURNING BUSH'},
+  {id:'11-let-it-shine',name:'11 Let It Shine [spontaneous]',longId:'11-let-it-shine-long',longName:'11 Let It Shine [from Burning Bush]'},
   {id:'12-you-first-long',name:'12 YOU FIRST (includes No One Compares To You)',short:'12-you-first',shortName:'12 YOU FIRST'},
   {id:'13-joy-strength-king-glory',name:'13 Your Joy Is My Strength & Who Is This King Of Glory? [spontaneous]'},
   {id:'14-wont-forget-benefits',name:'14 I Won\'t Forget All Your Benefits [spontaneous]'},
@@ -196,7 +196,7 @@ function setVersion(ver) {
   updateUI();
   renderPlaylist();
   const track = PLAYLIST[currentIndex];
-  if (track.short) {
+  if (track.short || track.longId) {
     loadTrack(currentIndex, getAudio());
   }
 }
@@ -206,7 +206,7 @@ function getNextAudio() { return audioEls[1 - audioIdx]; }
 
 function loadTrack(index, el) {
   const track = PLAYLIST[index];
-  const id = (useLong || !track.short) ? track.id : track.short;
+  const id = getTrackId(track);
   el.src = `https://raw.githubusercontent.com/Neonotso/dwell-player/tracks-storage/vol3/${id}.mp3`;
   el.load();
 }
@@ -224,7 +224,15 @@ function formatTime(seconds) {
 }
 
 function getTrackName(track) {
-  return (!useLong && track.shortName) ? track.shortName : track.name;
+  if (!useLong && track.shortName) return track.shortName;
+  if (useLong && track.longName) return track.longName;
+  return track.name;
+}
+
+function getTrackId(track) {
+  if (!useLong && track.short) return track.short;
+  if (useLong && track.longId) return track.longId;
+  return track.id;
 }
 
 function updateUI() {
